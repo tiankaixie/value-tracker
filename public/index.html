@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Value Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>💰 Value Tracker</h1>
+    <p class="subtitle">Track the true daily cost of everything you own</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="add">Add Item</button>
+    <button class="tab" data-tab="whatif">What If?</button>
+  </div>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="tab-content active">
+    <div class="controls">
+      <div class="control-group">
+        <label>Sort by</label>
+        <select id="sortBy">
+          <option value="costPerDay">Cost/Day ↑</option>
+          <option value="costPerDayDesc">Cost/Day ↓</option>
+          <option value="price">Price ↑</option>
+          <option value="priceDesc">Price ↓</option>
+          <option value="date">Date (newest)</option>
+          <option value="dateOld">Date (oldest)</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Category</label>
+        <select id="filterCategory"><option value="">All</option></select>
+      </div>
+      <div class="control-group">
+        <button id="exportBtn" class="btn btn-sm">Export JSON</button>
+      </div>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div id="itemsList"></div>
+    <p id="emptyMsg" class="empty" style="display:none">No items yet. Add your first item!</p>
+  </section>
+
+  <!-- Add Item -->
+  <section id="add" class="tab-content">
+    <form id="addForm" class="form-card">
+      <h2>Add New Item</h2>
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="itemName" required placeholder="MacBook Pro">
+      </div>
+      <div class="form-group">
+        <label>Purchase Price ($)</label>
+        <input type="number" id="itemPrice" required min="0" step="0.01" placeholder="1999.00">
+      </div>
+      <div class="form-group">
+        <label>Purchase Date</label>
+        <input type="date" id="itemDate" required>
+      </div>
+      <div class="form-group">
+        <label>Category (optional)</label>
+        <input type="text" id="itemCategory" placeholder="Electronics" list="categoryList">
+        <datalist id="categoryList"></datalist>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Item</button>
+    </form>
+  </section>
+
+  <!-- What If Calculator -->
+  <section id="whatif" class="tab-content">
+    <div class="form-card">
+      <h2>🤔 What If Calculator</h2>
+      <p class="hint">Considering a purchase? See what it would really cost per day.</p>
+      <div class="form-group">
+        <label>Item Price ($)</label>
+        <input type="number" id="wfPrice" min="0" step="0.01" placeholder="499.00">
+      </div>
+      <div class="form-group">
+        <label>Expected Years of Use</label>
+        <input type="number" id="wfYears" min="0.1" step="0.1" value="3" placeholder="3">
+      </div>
+      <div id="wfResult" class="wf-result" style="display:none">
+        <div class="wf-big-number" id="wfDaily"></div>
+        <div class="wf-breakdown" id="wfBreakdown"></div>
+        <div class="wf-timeline" id="wfTimeline"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal" style="display:none">
+  <div class="modal-content form-card">
+    <h2>Edit Item</h2>
+    <div class="form-group">
+      <label>Item Name</label>
+      <input type="text" id="editName">
+    </div>
+    <div class="form-group">
+      <label>Purchase Price ($)</label>
+      <input type="number" id="editPrice" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Purchase Date</label>
+      <input type="date" id="editDate">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <input type="text" id="editCategory">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="editSave">Save</button>
+      <button class="btn" id="editCancel">Cancel</button>
+    </div>
+    <input type="hidden" id="editId">
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

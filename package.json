@@ -1,0 +1,25 @@
+{
+  "name": "value-tracker",
+  "version": "1.0.0",
+  "description": "Track the daily cost of items you own",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiankaixie/value-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tiankaixie/value-tracker/issues"
+  },
+  "homepage": "https://github.com/tiankaixie/value-tracker#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "uuid": "^13.0.0"
+  }
+}
