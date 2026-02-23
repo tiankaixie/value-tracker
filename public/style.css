@@ -75,6 +75,7 @@ select { background: var(--surface); color: var(--text); border: 1px solid var(-
 .cost-per-day.good { color: var(--yellow); }
 .cost-per-day.high { color: var(--red); }
 .cost-label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; }
+.cost-secondary { font-size: 0.7rem; color: var(--text2); margin-top: -4px; }
 
 .value-bar { width: 120px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .value-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease-out; }

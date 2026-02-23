@@ -17,8 +17,20 @@ function daysSince(dateStr) {
   return Math.max(1, Math.floor(diff / 86400000));
 }
 
+function getUsageFraction(item) {
+  return (item.daysPerWeek || 7) / 7;
+}
+
+function useDaysSince(item) {
+  return daysSince(item.purchaseDate) * getUsageFraction(item);
+}
+
 function costPerDay(item) {
   return item.price / daysSince(item.purchaseDate);
+}
+
+function costPerUseDay(item) {
+  return item.price / useDaysSince(item);
 }
 
 function formatMoney(n) {
@@ -31,17 +43,16 @@ function costClass(cpd) {
   return 'high';
 }
 
-// Value score: how much value extracted
+// Value score: how much value extracted (accounts for usage frequency)
 function valueScore(item) {
-  const days = daysSince(item.purchaseDate);
+  const useDays = useDaysSince(item);
   if (item.expectedYears) {
-    // If expected lifespan set, score is % of lifespan used
-    const expectedDays = item.expectedYears * 365;
-    return Math.min(100, (days / expectedDays) * 100);
+    const expectedUseDays = item.expectedYears * 365 * getUsageFraction(item);
+    return Math.min(100, (useDays / expectedUseDays) * 100);
   }
-  // Fallback: reaches 100 when cost/day drops below $0.10
+  // Fallback: reaches 100 when cost/use-day drops below $0.10
   const target = item.price / 0.10;
-  return Math.min(100, (days / target) * 100);
+  return Math.min(100, (useDays / target) * 100);
 }
 
 function expectedCostPerDay(item) {
@@ -84,10 +95,10 @@ function renderDashboard() {
 
   let filtered = filterCat ? items.filter(i => i.category === filterCat) : [...items];
 
-  // Sort
+  // Sort (use costPerUseDay as primary metric)
   const sorters = {
-    costPerDay: (a, b) => costPerDay(a) - costPerDay(b),
-    costPerDayDesc: (a, b) => costPerDay(b) - costPerDay(a),
+    costPerDay: (a, b) => costPerUseDay(a) - costPerUseDay(b),
+    costPerDayDesc: (a, b) => costPerUseDay(b) - costPerUseDay(a),
     price: (a, b) => a.price - b.price,
     priceDesc: (a, b) => b.price - a.price,
     date: (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate),
@@ -100,13 +111,13 @@ function renderDashboard() {
   const statsRow = document.getElementById('statsRow');
   if (filtered.length > 0) {
     const totalValue = filtered.reduce((s, i) => s + i.price, 0);
-    const totalDaily = filtered.reduce((s, i) => s + costPerDay(i), 0);
-    const avgCpd = totalDaily / filtered.length;
-    const bestItem = [...filtered].sort((a, b) => costPerDay(a) - costPerDay(b))[0];
+    const totalPerUse = filtered.reduce((s, i) => s + costPerUseDay(i), 0);
+    const avgCpud = totalPerUse / filtered.length;
+    const bestItem = [...filtered].sort((a, b) => costPerUseDay(a) - costPerUseDay(b))[0];
     statsRow.innerHTML = `
       <div class="stat-card"><div class="label">Total Invested</div><div class="value">$${totalValue.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="label">Daily Burn</div><div class="value">${formatMoney(totalDaily)}</div></div>
-      <div class="stat-card"><div class="label">Avg Cost/Day</div><div class="value">${formatMoney(avgCpd)}</div></div>
+      <div class="stat-card"><div class="label">Daily Burn (use)</div><div class="value">${formatMoney(totalPerUse)}</div></div>
+      <div class="stat-card"><div class="label">Avg $/Use</div><div class="value">${formatMoney(avgCpud)}</div></div>
       <div class="stat-card"><div class="label">Best Value</div><div class="value" style="font-size:1rem">${bestItem.name}</div></div>
     `;
   } else {
@@ -125,13 +136,14 @@ function renderDashboard() {
   empty.style.display = 'none';
 
   list.innerHTML = filtered.map((item, idx) => {
+    const cpud = costPerUseDay(item);
     const cpd = costPerDay(item);
-    const ecpd = expectedCostPerDay(item);
     const days = daysSince(item.purchaseDate);
     const vs = valueScore(item);
     const barColor = valueBarColor(vs);
+    const dpw = item.daysPerWeek || 7;
+    const usageLabel = dpw < 7 ? `<span>${dpw}d/wk</span>` : '';
     const notesHtml = item.notes ? `<div class="item-notes">${esc(item.notes)}</div>` : '';
-    const expectedHtml = ecpd ? `<div class="expected-label">target: ${formatMoney(ecpd)}/day</div>` : '';
     const lifespanHtml = item.expectedYears ? `<span>${item.expectedYears}yr expected</span>` : '';
     return `
       <div class="item-card" style="animation-delay:${idx * 0.05}s; border-left-color: ${barColor}">
@@ -140,6 +152,7 @@ function renderDashboard() {
           <div class="item-meta">
             <span>$${item.price.toLocaleString()}</span>
             <span>${days.toLocaleString()} days owned</span>
+            ${usageLabel}
             ${lifespanHtml}
             <span class="category-tag">${esc(item.category)}</span>
           </div>
@@ -149,9 +162,9 @@ function renderDashboard() {
           </div>
         </div>
         <div class="item-right">
-          <div class="cost-per-day ${costClass(cpd)}">${formatMoney(cpd)}</div>
-          <div class="cost-label">per day</div>
-          ${expectedHtml}
+          <div class="cost-per-day ${costClass(cpud)}">${formatMoney(cpud)}</div>
+          <div class="cost-label">per use</div>
+          <div class="cost-secondary">${formatMoney(cpd)}/day</div>
           <div class="item-actions">
             <button onclick="editItem('${item.id}')" title="Edit">✏️</button>
             <button onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
@@ -178,10 +191,12 @@ document.getElementById('addForm').addEventListener('submit', async (e) => {
     category: document.getElementById('itemCategory').value || 'Uncategorized',
     expectedYears: document.getElementById('itemExpectedYears').value || null,
     notes: document.getElementById('itemNotes').value || '',
+    daysPerWeek: document.getElementById('itemDaysPerWeek').value || 7,
   };
   await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   e.target.reset();
   document.getElementById('itemDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('itemDaysPerWeek').value = '7';
   // Switch to dashboard
   document.querySelector('[data-tab="dashboard"]').click();
   loadItems();
@@ -208,6 +223,7 @@ function editItem(id) {
   document.getElementById('editCategory').value = item.category;
   document.getElementById('editExpectedYears').value = item.expectedYears || '';
   document.getElementById('editNotes').value = item.notes || '';
+  document.getElementById('editDaysPerWeek').value = item.daysPerWeek || 7;
   document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -224,6 +240,7 @@ document.getElementById('editSave').addEventListener('click', async () => {
     category: document.getElementById('editCategory').value,
     expectedYears: document.getElementById('editExpectedYears').value || null,
     notes: document.getElementById('editNotes').value || '',
+    daysPerWeek: document.getElementById('editDaysPerWeek').value || 7,
   };
   await fetch(`${API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('editModal').style.display = 'none';
@@ -245,37 +262,42 @@ document.getElementById('exportCsvBtn').addEventListener('click', () => {
 // What If calculator
 const wfPrice = document.getElementById('wfPrice');
 const wfYears = document.getElementById('wfYears');
+const wfDaysPerWeek = document.getElementById('wfDaysPerWeek');
 function calcWhatIf() {
   const price = parseFloat(wfPrice.value);
   const years = parseFloat(wfYears.value);
+  const dpw = parseFloat(wfDaysPerWeek.value) || 7;
   const result = document.getElementById('wfResult');
   if (!price || !years) { result.style.display = 'none'; return; }
   result.style.display = 'block';
-  const daily = price / (years * 365);
-  document.getElementById('wfDaily').textContent = formatMoney(daily) + '/day';
+  const usageFraction = dpw / 7;
+  const dailyPerUse = price / (years * 365 * usageFraction);
+  const dailyRaw = price / (years * 365);
+  document.getElementById('wfDaily').textContent = formatMoney(dailyPerUse) + '/use';
   document.getElementById('wfBreakdown').innerHTML = `
-    $${(price / (years * 12)).toFixed(2)}/month · $${(price / (years * 52)).toFixed(2)}/week
+    ${formatMoney(dailyRaw)}/day raw · $${(price / (years * 12)).toFixed(2)}/month · $${(price / (years * 52)).toFixed(2)}/week
   `;
   // Timeline
   const milestones = [0.5, 1, 2, 3, 5, 7, 10].filter(y => y <= years * 2);
-  document.getElementById('wfTimeline').innerHTML = '<h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text2)">Cost/Day Over Time</h3>' +
+  document.getElementById('wfTimeline').innerHTML = '<h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text2)">Cost/Use Over Time</h3>' +
     milestones.map(y => {
-      const cpd = price / (y * 365);
+      const cpud = price / (y * 365 * usageFraction);
       return `<div class="wf-timeline-row">
         <span class="yr">${y} year${y !== 1 ? 's' : ''}</span>
-        <span class="cost-per-day ${costClass(cpd)}">${formatMoney(cpd)}</span>
+        <span class="cost-per-day ${costClass(cpud)}">${formatMoney(cpud)}/use</span>
       </div>`;
     }).join('');
 }
 wfPrice.addEventListener('input', calcWhatIf);
 wfYears.addEventListener('input', calcWhatIf);
+wfDaysPerWeek.addEventListener('input', calcWhatIf);
 
 // Close modal on backdrop click
 document.getElementById('editModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('editModal').style.display = 'none';
 });
 
-// Chart
+// Chart (uses cost per use day)
 function renderChart() {
   const canvas = document.getElementById('chartCanvas');
   if (!canvas || items.length === 0) return;
@@ -287,8 +309,8 @@ function renderChart() {
   const W = canvas.clientWidth, H = 400;
   ctx.clearRect(0, 0, W, H);
 
-  const sorted = [...items].sort((a, b) => costPerDay(b) - costPerDay(a));
-  const maxCpd = Math.max(...sorted.map(costPerDay));
+  const sorted = [...items].sort((a, b) => costPerUseDay(b) - costPerUseDay(a));
+  const maxCpud = Math.max(...sorted.map(costPerUseDay));
   const barW = Math.min(60, (W - 60) / sorted.length - 4);
   const startX = 50;
 
@@ -299,19 +321,19 @@ function renderChart() {
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const y = 30 + (H - 80) * (i / 4);
-    const val = maxCpd * (1 - i / 4);
+    const val = maxCpud * (1 - i / 4);
     ctx.beginPath(); ctx.moveTo(45, y); ctx.lineTo(W, y); ctx.stroke();
     ctx.fillText('$' + val.toFixed(2), 42, y + 4);
   }
 
   sorted.forEach((item, i) => {
-    const cpd = costPerDay(item);
-    const barH = (cpd / maxCpd) * (H - 80);
+    const cpud = costPerUseDay(item);
+    const barH = (cpud / maxCpud) * (H - 80);
     const x = startX + i * (barW + 4);
     const y = H - 50 - barH;
 
     // Bar
-    const cls = costClass(cpd);
+    const cls = costClass(cpud);
     ctx.fillStyle = cls === 'excellent' ? '#00b894' : cls === 'good' ? '#fdcb6e' : '#e17055';
     ctx.beginPath();
     ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
@@ -336,7 +358,7 @@ origTabClick.forEach(tab => {
   tab.addEventListener('click', () => { if (tab.dataset.tab === 'charts') setTimeout(renderChart, 50); });
 });
 
-// Import
+// Import (preserves daysPerWeek)
 document.getElementById('importFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -349,7 +371,15 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
       await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: item.name, price: item.price, purchaseDate: item.purchaseDate, category: item.category })
+        body: JSON.stringify({
+          name: item.name,
+          price: item.price,
+          purchaseDate: item.purchaseDate,
+          category: item.category,
+          expectedYears: item.expectedYears || null,
+          notes: item.notes || '',
+          daysPerWeek: item.daysPerWeek || 7,
+        })
       });
     }
     loadItems();

@@ -6,7 +6,10 @@
 <title>Value Tracker</title>
 <link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6c5ce7">
+<meta name="theme-color" content="#0f0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
 <body>
 <div class="container">
@@ -28,8 +31,8 @@
       <div class="control-group">
         <label>Sort by</label>
         <select id="sortBy">
-          <option value="costPerDay">Cost/Day ↑</option>
-          <option value="costPerDayDesc">Cost/Day ↓</option>
+          <option value="costPerDay">$/Use ↑</option>
+          <option value="costPerDayDesc">$/Use ↓</option>
           <option value="price">Price ↑</option>
           <option value="priceDesc">Price ↓</option>
           <option value="date">Date (newest)</option>
@@ -78,6 +81,10 @@
         <input type="number" id="itemExpectedYears" min="0.1" step="0.1" placeholder="5">
       </div>
       <div class="form-group">
+        <label>Days Used Per Week (optional, default 7)</label>
+        <input type="number" id="itemDaysPerWeek" min="0.1" max="7" step="0.1" value="7" placeholder="7">
+      </div>
+      <div class="form-group">
         <label>Notes (optional)</label>
         <textarea id="itemNotes" placeholder="Any notes about this purchase..." rows="2" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.95rem;resize:vertical;font-family:inherit"></textarea>
       </div>
@@ -89,7 +96,7 @@
   <section id="whatif" class="tab-content">
     <div class="form-card">
       <h2>🤔 What If Calculator</h2>
-      <p class="hint">Considering a purchase? See what it would really cost per day.</p>
+      <p class="hint">Considering a purchase? See what it would really cost per use.</p>
       <div class="form-group">
         <label>Item Price ($)</label>
         <input type="number" id="wfPrice" min="0" step="0.01" placeholder="499.00">
@@ -97,6 +104,10 @@
       <div class="form-group">
         <label>Expected Years of Use</label>
         <input type="number" id="wfYears" min="0.1" step="0.1" value="3" placeholder="3">
+      </div>
+      <div class="form-group">
+        <label>Days Used Per Week</label>
+        <input type="number" id="wfDaysPerWeek" min="0.1" max="7" step="0.1" value="7" placeholder="7">
       </div>
       <div id="wfResult" class="wf-result" style="display:none">
         <div class="wf-big-number" id="wfDaily"></div>
@@ -110,7 +121,7 @@
   <!-- Charts -->
   <section id="charts" class="tab-content">
     <div class="form-card" style="max-width:100%">
-      <h2>📊 Cost/Day Breakdown</h2>
+      <h2>📊 Cost/Use Breakdown</h2>
       <canvas id="chartCanvas" width="860" height="400" style="width:100%;margin-top:16px"></canvas>
     </div>
   </section>
@@ -138,6 +149,10 @@
     <div class="form-group">
       <label>Expected Lifespan (years)</label>
       <input type="number" id="editExpectedYears" min="0.1" step="0.1">
+    </div>
+    <div class="form-group">
+      <label>Days Used Per Week</label>
+      <input type="number" id="editDaysPerWeek" min="0.1" max="7" step="0.1" value="7">
     </div>
     <div class="form-group">
       <label>Notes</label>
