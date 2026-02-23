@@ -17,6 +17,7 @@
     <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="add">Add Item</button>
     <button class="tab" data-tab="whatif">What If?</button>
+    <button class="tab" data-tab="charts">Charts</button>
   </div>
 
   <!-- Dashboard -->
@@ -39,7 +40,8 @@
         <select id="filterCategory"><option value="">All</option></select>
       </div>
       <div class="control-group">
-        <button id="exportBtn" class="btn btn-sm">Export JSON</button>
+        <button id="exportBtn" class="btn btn-sm">Export</button>
+        <label class="btn btn-sm" style="cursor:pointer">Import <input type="file" id="importFile" accept=".json" style="display:none"></label>
       </div>
     </div>
     <div class="stats-row" id="statsRow"></div>
@@ -93,6 +95,14 @@
     </div>
   </section>
 </div>
+
+  <!-- Charts -->
+  <section id="charts" class="tab-content">
+    <div class="form-card" style="max-width:100%">
+      <h2>📊 Cost/Day Breakdown</h2>
+      <canvas id="chartCanvas" width="860" height="400" style="width:100%;margin-top:16px"></canvas>
+    </div>
+  </section>
 
 <!-- Edit Modal -->
 <div id="editModal" class="modal" style="display:none">

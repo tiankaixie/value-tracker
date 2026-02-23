@@ -50,6 +50,7 @@ async function loadItems() {
   const res = await fetch(API);
   items = await res.json();
   renderDashboard();
+  if (typeof renderChart === 'function') renderChart();
 }
 
 function getCategories() {
@@ -246,6 +247,89 @@ wfYears.addEventListener('input', calcWhatIf);
 // Close modal on backdrop click
 document.getElementById('editModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('editModal').style.display = 'none';
+});
+
+// Chart
+function renderChart() {
+  const canvas = document.getElementById('chartCanvas');
+  if (!canvas || items.length === 0) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = 400 * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.clientWidth, H = 400;
+  ctx.clearRect(0, 0, W, H);
+
+  const sorted = [...items].sort((a, b) => costPerDay(b) - costPerDay(a));
+  const maxCpd = Math.max(...sorted.map(costPerDay));
+  const barW = Math.min(60, (W - 60) / sorted.length - 4);
+  const startX = 50;
+
+  // Grid lines
+  ctx.strokeStyle = '#2a2a3e';
+  ctx.fillStyle = '#8888a8';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = 30 + (H - 80) * (i / 4);
+    const val = maxCpd * (1 - i / 4);
+    ctx.beginPath(); ctx.moveTo(45, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillText('$' + val.toFixed(2), 42, y + 4);
+  }
+
+  sorted.forEach((item, i) => {
+    const cpd = costPerDay(item);
+    const barH = (cpd / maxCpd) * (H - 80);
+    const x = startX + i * (barW + 4);
+    const y = H - 50 - barH;
+
+    // Bar
+    const cls = costClass(cpd);
+    ctx.fillStyle = cls === 'excellent' ? '#00b894' : cls === 'good' ? '#fdcb6e' : '#e17055';
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#8888a8';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.save();
+    ctx.translate(x + barW / 2, H - 38);
+    ctx.rotate(-0.5);
+    const label = item.name.length > 10 ? item.name.slice(0, 9) + '…' : item.name;
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+  });
+}
+
+// Re-render chart when tab shown
+const origTabClick = document.querySelectorAll('.tab');
+origTabClick.forEach(tab => {
+  tab.addEventListener('click', () => { if (tab.dataset.tab === 'charts') setTimeout(renderChart, 50); });
+});
+
+// Import
+document.getElementById('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const importItems = data.items || data;
+    if (!Array.isArray(importItems)) throw new Error('Invalid format');
+    for (const item of importItems) {
+      await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: item.name, price: item.price, purchaseDate: item.purchaseDate, category: item.category })
+      });
+    }
+    loadItems();
+    alert(`Imported ${importItems.length} items!`);
+  } catch (err) { alert('Import failed: ' + err.message); }
+  e.target.value = '';
 });
 
 // Init
