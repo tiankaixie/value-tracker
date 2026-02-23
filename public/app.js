@@ -31,12 +31,22 @@ function costClass(cpd) {
   return 'high';
 }
 
-// Value score: how much value extracted (days owned relative to price)
+// Value score: how much value extracted
 function valueScore(item) {
   const days = daysSince(item.purchaseDate);
-  // Score from 0-100: reaches 100 when cost/day drops below $0.10
-  const target = item.price / 0.10; // days needed for $0.10/day
+  if (item.expectedYears) {
+    // If expected lifespan set, score is % of lifespan used
+    const expectedDays = item.expectedYears * 365;
+    return Math.min(100, (days / expectedDays) * 100);
+  }
+  // Fallback: reaches 100 when cost/day drops below $0.10
+  const target = item.price / 0.10;
   return Math.min(100, (days / target) * 100);
+}
+
+function expectedCostPerDay(item) {
+  if (item.expectedYears) return item.price / (item.expectedYears * 365);
+  return null;
 }
 
 function valueBarColor(score) {
@@ -116,9 +126,13 @@ function renderDashboard() {
 
   list.innerHTML = filtered.map((item, idx) => {
     const cpd = costPerDay(item);
+    const ecpd = expectedCostPerDay(item);
     const days = daysSince(item.purchaseDate);
     const vs = valueScore(item);
     const barColor = valueBarColor(vs);
+    const notesHtml = item.notes ? `<div class="item-notes">${esc(item.notes)}</div>` : '';
+    const expectedHtml = ecpd ? `<div class="expected-label">target: ${formatMoney(ecpd)}/day</div>` : '';
+    const lifespanHtml = item.expectedYears ? `<span>${item.expectedYears}yr expected</span>` : '';
     return `
       <div class="item-card" style="animation-delay:${idx * 0.05}s; border-left-color: ${barColor}">
         <div class="item-info">
@@ -126,8 +140,10 @@ function renderDashboard() {
           <div class="item-meta">
             <span>$${item.price.toLocaleString()}</span>
             <span>${days.toLocaleString()} days owned</span>
+            ${lifespanHtml}
             <span class="category-tag">${esc(item.category)}</span>
           </div>
+          ${notesHtml}
           <div class="value-bar" style="margin-top:8px" title="Value score: ${vs.toFixed(0)}%">
             <div class="value-bar-fill" style="width:${vs}%; background:${barColor}"></div>
           </div>
@@ -135,6 +151,7 @@ function renderDashboard() {
         <div class="item-right">
           <div class="cost-per-day ${costClass(cpd)}">${formatMoney(cpd)}</div>
           <div class="cost-label">per day</div>
+          ${expectedHtml}
           <div class="item-actions">
             <button onclick="editItem('${item.id}')" title="Edit">✏️</button>
             <button onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
@@ -159,6 +176,8 @@ document.getElementById('addForm').addEventListener('submit', async (e) => {
     price: document.getElementById('itemPrice').value,
     purchaseDate: document.getElementById('itemDate').value,
     category: document.getElementById('itemCategory').value || 'Uncategorized',
+    expectedYears: document.getElementById('itemExpectedYears').value || null,
+    notes: document.getElementById('itemNotes').value || '',
   };
   await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   e.target.reset();
@@ -187,6 +206,8 @@ function editItem(id) {
   document.getElementById('editPrice').value = item.price;
   document.getElementById('editDate').value = item.purchaseDate;
   document.getElementById('editCategory').value = item.category;
+  document.getElementById('editExpectedYears').value = item.expectedYears || '';
+  document.getElementById('editNotes').value = item.notes || '';
   document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -201,6 +222,8 @@ document.getElementById('editSave').addEventListener('click', async () => {
     price: document.getElementById('editPrice').value,
     purchaseDate: document.getElementById('editDate').value,
     category: document.getElementById('editCategory').value,
+    expectedYears: document.getElementById('editExpectedYears').value || null,
+    notes: document.getElementById('editNotes').value || '',
   };
   await fetch(`${API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('editModal').style.display = 'none';
@@ -214,6 +237,9 @@ document.getElementById('filterCategory').addEventListener('change', renderDashb
 // Export
 document.getElementById('exportBtn').addEventListener('click', () => {
   window.open('/api/export');
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  window.open('/api/export/csv');
 });
 
 // What If calculator
@@ -331,6 +357,11 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
   } catch (err) { alert('Import failed: ' + err.message); }
   e.target.value = '';
 });
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 // Init
 loadItems();

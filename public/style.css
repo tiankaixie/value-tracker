@@ -88,6 +88,9 @@ select { background: var(--surface); color: var(--text); border: 1px solid var(-
   padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;
 }
 
+.item-notes { font-size: 0.8rem; color: var(--text2); margin-top: 6px; font-style: italic; }
+.expected-label { font-size: 0.7rem; color: var(--text2); margin-top: 2px; }
+
 /* Forms */
 .form-card { background: var(--surface); border-radius: var(--radius); padding: 28px; max-width: 500px; margin: 0 auto; }
 .form-card h2 { margin-bottom: 20px; }

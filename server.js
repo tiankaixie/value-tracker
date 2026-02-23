@@ -27,7 +27,7 @@ app.get('/api/items', (req, res) => {
 
 // Add item
 app.post('/api/items', (req, res) => {
-  const { name, price, purchaseDate, category } = req.body;
+  const { name, price, purchaseDate, category, expectedYears, notes, daysPerWeek } = req.body;
   if (!name || !price || !purchaseDate) {
     return res.status(400).json({ error: 'name, price, purchaseDate required' });
   }
@@ -38,6 +38,9 @@ app.post('/api/items', (req, res) => {
     price: parseFloat(price),
     purchaseDate,
     category: category || 'Uncategorized',
+    expectedYears: expectedYears ? parseFloat(expectedYears) : null,
+    daysPerWeek: daysPerWeek ? Math.min(7, Math.max(0.1, parseFloat(daysPerWeek))) : 7,
+    notes: notes || '',
     createdAt: new Date().toISOString()
   };
   data.items.push(item);
@@ -64,11 +67,24 @@ app.delete('/api/items/:id', (req, res) => {
   res.status(204).end();
 });
 
-// Export data
+// Export JSON
 app.get('/api/export', (req, res) => {
   const data = readData();
   res.setHeader('Content-Disposition', 'attachment; filename=value-tracker-export.json');
   res.json(data);
+});
+
+// Export CSV
+app.get('/api/export/csv', (req, res) => {
+  const data = readData();
+  const headers = 'Name,Price,Purchase Date,Category,Expected Years,Days Per Week,Notes';
+  const rows = data.items.map(i => {
+    const esc = (s) => `"${(s || '').replace(/"/g, '""')}"`;
+    return `${esc(i.name)},${i.price},${i.purchaseDate},${esc(i.category)},${i.expectedYears || ''},${i.daysPerWeek || 7},${esc(i.notes)}`;
+  });
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename=value-tracker.csv');
+  res.send([headers, ...rows].join('\n'));
 });
 
 app.listen(PORT, () => {

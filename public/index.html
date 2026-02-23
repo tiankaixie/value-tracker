@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Value Tracker</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6c5ce7">
 </head>
 <body>
 <div class="container">
@@ -40,7 +42,8 @@
         <select id="filterCategory"><option value="">All</option></select>
       </div>
       <div class="control-group">
-        <button id="exportBtn" class="btn btn-sm">Export</button>
+        <button id="exportBtn" class="btn btn-sm">JSON</button>
+        <button id="exportCsvBtn" class="btn btn-sm">CSV</button>
         <label class="btn btn-sm" style="cursor:pointer">Import <input type="file" id="importFile" accept=".json" style="display:none"></label>
       </div>
     </div>
@@ -69,6 +72,14 @@
         <label>Category (optional)</label>
         <input type="text" id="itemCategory" placeholder="Electronics" list="categoryList">
         <datalist id="categoryList"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Expected Lifespan (years, optional)</label>
+        <input type="number" id="itemExpectedYears" min="0.1" step="0.1" placeholder="5">
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="itemNotes" placeholder="Any notes about this purchase..." rows="2" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.95rem;resize:vertical;font-family:inherit"></textarea>
       </div>
       <button type="submit" class="btn btn-primary">Add Item</button>
     </form>
@@ -123,6 +134,14 @@
     <div class="form-group">
       <label>Category</label>
       <input type="text" id="editCategory">
+    </div>
+    <div class="form-group">
+      <label>Expected Lifespan (years)</label>
+      <input type="number" id="editExpectedYears" min="0.1" step="0.1">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="editNotes" rows="2" style="width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.95rem;resize:vertical;font-family:inherit"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" id="editSave">Save</button>

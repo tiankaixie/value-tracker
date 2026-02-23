@@ -1,27 +1,30 @@
 # 💰 Value Tracker
 
-Track the true daily cost of everything you own. Each item shows its cost-per-day, helping you appreciate long-lasting purchases and make better buying decisions.
+Track the true daily cost of everything you own. Make smarter purchase decisions.
 
 ## Features
 
-- **Dashboard** — All items with cost-per-day, value progress bars, and summary stats
-- **What If Calculator** — Project daily cost before buying something
-- **Sort & Filter** — By cost/day, price, date, name, or category
-- **Edit & Delete** — Full CRUD for items
-- **Export** — Download your data as JSON
-- **Dark Mode** — Clean, modern UI
+- **Dashboard** — See all items with cost/day, value progress bars, summary stats
+- **What If Calculator** — Preview the daily cost before buying
+- **Charts** — Visual cost/day breakdown
+- **Expected Lifespan** — Set target years to track value extraction progress
+- **Notes** — Add context to each item
+- **Import/Export** — JSON and CSV export, JSON import
+- **PWA** — Installable as a standalone app
+- **Dark Theme** — Modern, clean UI
 
-## Setup
+## Quick Start
 
 ```bash
 npm install
 npm start
+# Open http://localhost:3000
 ```
 
-Open http://localhost:3000
+## Data
 
-## Tech
+All data is stored locally in `data.json`. Export anytime via the dashboard.
 
-- Node.js + Express backend
-- Vanilla HTML/CSS/JS frontend
-- Local JSON file storage (data.json)
+## Tech Stack
+
+Node.js + Express backend, vanilla HTML/CSS/JS frontend, local JSON file storage.
