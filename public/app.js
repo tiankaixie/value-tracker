@@ -62,6 +62,11 @@ function valueBarColor(score) {
 
 // Fetch & render
 async function loadItems() {
+  if (window.__STATIC_DATA) {
+    items = window.__STATIC_DATA;
+    renderDashboard();
+    return;
+  }
   const res = await fetch(API);
   items = await res.json();
   renderDashboard();
@@ -172,9 +177,30 @@ document.getElementById('filterCategory').addEventListener('change', renderDashb
 
 // Export
 document.getElementById('exportBtn').addEventListener('click', () => {
+  if (window.__STATIC_MODE) {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'value-tracker.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
   window.open('/api/export');
 });
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (window.__STATIC_MODE) {
+    const headers = ['name','price','purchaseDate','category','expectedYears','daysPerWeek','notes'];
+    const rows = items.map(it => headers.map(h => '"' + String(it[h] || '').replace(/"/g, '""') + '"').join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'value-tracker.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
   window.open('/api/export/csv');
 });
 
@@ -453,7 +479,7 @@ function renderCharts() {
 }
 
 // Service Worker
-if ('serviceWorker' in navigator) {
+if (!window.__STATIC_MODE && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 

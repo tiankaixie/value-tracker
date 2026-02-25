@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Value Tracker</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --text: #1d1d1f;
+  --text2: #86868b;
+  --text3: #aeaeb2;
+  --border: rgba(0, 0, 0, 0.06);
+  --accent: #0071e3;
+  --accent-soft: rgba(0, 113, 227, 0.08);
+  --green: #34c759;
+  --green-soft: rgba(52, 199, 89, 0.1);
+  --red: #ff3b30;
+  --red-soft: rgba(255, 59, 48, 0.1);
+  --yellow: #ff9500;
+  --yellow-soft: rgba(255, 149, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --radius: 16px;
+  --radius-sm: 10px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --text: #f5f5f7;
+    --text2: #98989d;
+    --text3: #636366;
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #0a84ff;
+    --accent-soft: rgba(10, 132, 255, 0.12);
+    --green: #30d158;
+    --green-soft: rgba(48, 209, 88, 0.15);
+    --red: #ff453a;
+    --red-soft: rgba(255, 69, 58, 0.15);
+    --yellow: #ff9f0a;
+    --yellow-soft: rgba(255, 159, 10, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* Header */
+header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.subtitle {
+  color: var(--text2);
+  margin-top: 8px;
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 40px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  letter-spacing: -0.01em;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tab.active {
+    box-shadow: 0 2px 8px rgba(10, 132, 255, 0.3);
+  }
+}
+
+.tab:hover:not(.active) {
+  color: var(--text);
+  background: var(--border);
+}
+
+/* Tab content */
+.tab-content {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 0.75rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.export-group {
+  margin-left: auto;
+  flex-direction: row;
+  align-items: end;
+  gap: 8px;
+}
+
+select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%2386868b'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.btn-export {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.btn-export:hover {
+  color: var(--text);
+  border-color: var(--text3);
+  box-shadow: var(--shadow);
+}
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card .label {
+  font-size: 0.75rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.stat-card .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 6px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* Item cards */
+.item-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  box-shadow: var(--shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: slideIn 0.4s ease-out both;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.item-info h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.item-meta {
+  font-size: 0.8125rem;
+  color: var(--text2);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.item-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cost-per-day {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cost-per-day.excellent { color: var(--green); }
+.cost-per-day.good { color: var(--yellow); }
+.cost-per-day.high { color: var(--red); }
+
+.cost-label {
+  font-size: 0.6875rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+.cost-secondary {
+  font-size: 0.75rem;
+  color: var(--text3);
+}
+
+.value-bar {
+  width: 100%;
+  max-width: 160px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.value-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease-out;
+}
+
+.category-tag {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.item-notes {
+  font-size: 0.8125rem;
+  color: var(--text2);
+  margin-top: 8px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.expected-label {
+  font-size: 0.75rem;
+  color: var(--text3);
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 520px;
+  margin: 0 auto;
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.card-form {
+  max-width: 480px;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.form-group input::placeholder {
+  color: var(--text3);
+}
+
+.hint {
+  color: var(--text2);
+  font-size: 0.9375rem;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text2);
+  padding: 80px 24px;
+  font-size: 1.125rem;
+}
+
+/* What If */
+.wf-result {
+  margin-top: 32px;
+  text-align: center;
+  animation: fadeIn 0.4s ease;
+}
+
+.wf-big-number {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+
+.wf-breakdown {
+  color: var(--text2);
+  margin-top: 8px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.wf-timeline {
+  margin-top: 28px;
+}
+
+.wf-timeline h3 {
+  font-size: 0.8125rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.wf-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+
+.wf-timeline-row:last-child {
+  border-bottom: none;
+}
+
+.wf-timeline-row .yr {
+  color: var(--text2);
+}
+
+/* Charts grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.chart-card h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.chart-hint {
+  font-size: 0.75rem;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.chart-card-wide {
+  grid-column: 1 / -1;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 260px;
+  margin-top: 12px;
+}
+
+.chart-wrap-doughnut {
+  height: 240px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .container {
+    padding: 32px 16px 64px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .tabs {
+    margin-bottom: 28px;
+  }
+
+  .tab {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card .value {
+    font-size: 1.375rem;
+  }
+
+  .item-card {
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+  }
+
+  .item-right {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-group {
+    margin-left: 0;
+  }
+
+  .card {
+    padding: 24px 20px;
+  }
+
+  .wf-big-number {
+    font-size: 2.25rem;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    padding: 20px 16px;
+  }
+
+  .chart-wrap {
+    height: 220px;
+  }
+}
+
+</style>
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Value Tracker</h1>
+    <p class="subtitle">The true daily cost of everything you own</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="whatif">What If</button>
+    <button class="tab" data-tab="charts">Charts</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="tab-content active">
+    <div class="controls">
+      <div class="control-group">
+        <label>Sort by</label>
+        <select id="sortBy">
+          <option value="costPerDay">$/Use ↑</option>
+          <option value="costPerDayDesc">$/Use ↓</option>
+          <option value="price">Price ↑</option>
+          <option value="priceDesc">Price ↓</option>
+          <option value="date">Date (newest)</option>
+          <option value="dateOld">Date (oldest)</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Category</label>
+        <select id="filterCategory"><option value="">All</option></select>
+      </div>
+      <div class="control-group export-group">
+        <button id="exportBtn" class="btn-export">Export JSON</button>
+        <button id="exportCsvBtn" class="btn-export">Export CSV</button>
+      </div>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div id="itemsList"></div>
+    <p id="emptyMsg" class="empty" style="display:none">No items tracked yet.</p>
+  </section>
+
+  <!-- What If Calculator -->
+  <section id="whatif" class="tab-content">
+    <div class="card card-form">
+      <h2>What If Calculator</h2>
+      <p class="hint">Considering a purchase? See what it would really cost per use.</p>
+      <div class="form-group">
+        <label>Item Price ($)</label>
+        <input type="number" id="wfPrice" min="0" step="0.01" placeholder="499.00">
+      </div>
+      <div class="form-group">
+        <label>Expected Years of Use</label>
+        <input type="number" id="wfYears" min="0.1" step="0.1" value="3" placeholder="3">
+      </div>
+      <div class="form-group">
+        <label>Days Used Per Week</label>
+        <input type="number" id="wfDaysPerWeek" min="0.1" max="7" step="0.1" value="7" placeholder="7">
+      </div>
+      <div id="wfResult" class="wf-result" style="display:none">
+        <div class="wf-big-number" id="wfDaily"></div>
+        <div class="wf-breakdown" id="wfBreakdown"></div>
+        <div class="wf-timeline" id="wfTimeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts -->
+  <section id="charts" class="tab-content">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Spending by Category</h3>
+        <div class="chart-wrap chart-wrap-doughnut">
+          <canvas id="chartCategory"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Value Score Distribution</h3>
+        <div class="chart-wrap">
+          <canvas id="chartValueDist"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-card-wide">
+        <h3>Cost per Use Over Time</h3>
+        <p class="chart-hint">Top 5 most expensive items — how cost/use drops as you keep using them</p>
+        <div class="chart-wrap">
+          <canvas id="chartCpuTrend"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-card-wide">
+        <h3>Monthly Cost Breakdown</h3>
+        <p class="chart-hint">Estimated monthly cost by category</p>
+        <div class="chart-wrap">
+          <canvas id="chartMonthlyCost"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+window.__STATIC_MODE = true;
+window.__STATIC_DATA = [
+  {
+    "id": "eefc1239-882f-4cb1-8990-1d82bef07c96",
+    "name": "MacBook Pro M1",
+    "price": 1999,
+    "purchaseDate": "2021-06-15",
+    "category": "Electronics",
+    "expectedYears": 5,
+    "daysPerWeek": 7,
+    "notes": "Apple Silicon M1 chip",
+    "createdAt": "2026-02-25T02:04:24.263Z"
+  },
+  {
+    "id": "c974ef5e-71d4-492a-8efb-cc1bf19c9e99",
+    "name": "iPhone 15 Pro",
+    "price": 999,
+    "purchaseDate": "2023-09-22",
+    "category": "Electronics",
+    "expectedYears": 4,
+    "daysPerWeek": 7,
+    "notes": "256GB, Natural Titanium",
+    "createdAt": "2026-02-25T02:04:24.303Z"
+  },
+  {
+    "id": "4aa01eeb-29e9-41e7-bdb8-acc1c4c72897",
+    "name": "Tesla Model 3",
+    "price": 40000,
+    "purchaseDate": "2023-03-10",
+    "category": "Vehicle",
+    "expectedYears": 10,
+    "daysPerWeek": 5,
+    "notes": "Standard Range Plus",
+    "createdAt": "2026-02-25T02:04:24.345Z"
+  }
+];
+</script>
+<script>
+const API = '/api/items';
+let items = [];
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'charts') setTimeout(renderCharts, 50);
+  });
+});
+
+// Helpers
+function daysSince(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.max(1, Math.floor(diff / 86400000));
+}
+
+function getUsageFraction(item) {
+  return (item.daysPerWeek || 7) / 7;
+}
+
+function useDaysSince(item) {
+  return daysSince(item.purchaseDate) * getUsageFraction(item);
+}
+
+function costPerDay(item) {
+  return item.price / daysSince(item.purchaseDate);
+}
+
+function costPerUseDay(item) {
+  return item.price / useDaysSince(item);
+}
+
+function formatMoney(n) {
+  return n < 0.01 ? '<$0.01' : '
+</body>
+</html>
+ + n.toFixed(2);
+}
+
+function costClass(cpd) {
+  if (cpd < 1) return 'excellent';
+  if (cpd < 5) return 'good';
+  return 'high';
+}
+
+function valueScore(item) {
+  const useDays = useDaysSince(item);
+  if (item.expectedYears) {
+    const expectedUseDays = item.expectedYears * 365 * getUsageFraction(item);
+    return Math.min(100, (useDays / expectedUseDays) * 100);
+  }
+  const target = item.price / 0.10;
+  return Math.min(100, (useDays / target) * 100);
+}
+
+function valueBarColor(score) {
+  if (score > 66) return 'var(--green)';
+  if (score > 33) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+// Fetch & render
+async function loadItems() {
+  if (window.__STATIC_DATA) {
+    items = window.__STATIC_DATA;
+    renderDashboard();
+    return;
+  }
+  const res = await fetch(API);
+  items = await res.json();
+  renderDashboard();
+}
+
+function getCategories() {
+  return [...new Set(items.map(i => i.category).filter(Boolean))];
+}
+
+function renderDashboard() {
+  const sortBy = document.getElementById('sortBy').value;
+  const filterCat = document.getElementById('filterCategory').value;
+
+  // Update category filter
+  const catSelect = document.getElementById('filterCategory');
+  const cats = getCategories();
+  const currentVal = catSelect.value;
+  catSelect.innerHTML = '<option value="">All</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  catSelect.value = currentVal;
+
+  let filtered = filterCat ? items.filter(i => i.category === filterCat) : [...items];
+
+  // Sort
+  const sorters = {
+    costPerDay: (a, b) => costPerUseDay(a) - costPerUseDay(b),
+    costPerDayDesc: (a, b) => costPerUseDay(b) - costPerUseDay(a),
+    price: (a, b) => a.price - b.price,
+    priceDesc: (a, b) => b.price - a.price,
+    date: (a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate),
+    dateOld: (a, b) => new Date(a.purchaseDate) - new Date(b.purchaseDate),
+    name: (a, b) => a.name.localeCompare(b.name),
+  };
+  filtered.sort(sorters[sortBy] || sorters.costPerDay);
+
+  // Stats
+  const statsRow = document.getElementById('statsRow');
+  if (filtered.length > 0) {
+    const totalValue = filtered.reduce((s, i) => s + i.price, 0);
+    const totalPerUse = filtered.reduce((s, i) => s + costPerUseDay(i), 0);
+    const avgCpud = totalPerUse / filtered.length;
+    const bestItem = [...filtered].sort((a, b) => costPerUseDay(a) - costPerUseDay(b))[0];
+    statsRow.innerHTML = `
+      <div class="stat-card"><div class="label">Total Invested</div><div class="value">${totalValue.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="label">Daily Burn</div><div class="value">${formatMoney(totalPerUse)}</div></div>
+      <div class="stat-card"><div class="label">Avg $/Use</div><div class="value">${formatMoney(avgCpud)}</div></div>
+      <div class="stat-card"><div class="label">Best Value</div><div class="value" style="font-size:1.0625rem">${bestItem.name}</div></div>
+    `;
+  } else {
+    statsRow.innerHTML = '';
+  }
+
+  // Items
+  const list = document.getElementById('itemsList');
+  const empty = document.getElementById('emptyMsg');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  list.innerHTML = filtered.map((item, idx) => {
+    const cpud = costPerUseDay(item);
+    const cpd = costPerDay(item);
+    const days = daysSince(item.purchaseDate);
+    const vs = valueScore(item);
+    const barColor = valueBarColor(vs);
+    const dpw = item.daysPerWeek || 7;
+    const usageLabel = dpw < 7 ? `<span>${dpw}d/wk</span>` : '';
+    const notesHtml = item.notes ? `<div class="item-notes">${esc(item.notes)}</div>` : '';
+    const lifespanHtml = item.expectedYears ? `<span>${item.expectedYears}yr expected</span>` : '';
+    return `
+      <div class="item-card" style="animation-delay:${idx * 0.04}s">
+        <div class="item-info">
+          <h3>${esc(item.name)}</h3>
+          <div class="item-meta">
+            <span>${item.price.toLocaleString()}</span>
+            <span>${days.toLocaleString()} days</span>
+            ${usageLabel}
+            ${lifespanHtml}
+            ${item.category ? `<span class="category-tag">${esc(item.category)}</span>` : ''}
+          </div>
+          ${notesHtml}
+          <div class="value-bar" style="margin-top:10px" title="Value: ${vs.toFixed(0)}%">
+            <div class="value-bar-fill" style="width:${vs}%; background:${barColor}"></div>
+          </div>
+        </div>
+        <div class="item-right">
+          <div class="cost-per-day ${costClass(cpud)}">${formatMoney(cpud)}</div>
+          <div class="cost-label">per use</div>
+          <div class="cost-secondary">${formatMoney(cpd)}/day</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// Sort/filter change
+document.getElementById('sortBy').addEventListener('change', renderDashboard);
+document.getElementById('filterCategory').addEventListener('change', renderDashboard);
+
+// Export
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (window.__STATIC_MODE) {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'value-tracker.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+  window.open('/api/export');
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (window.__STATIC_MODE) {
+    const headers = ['name','price','purchaseDate','category','expectedYears','daysPerWeek','notes'];
+    const rows = items.map(it => headers.map(h => '"' + String(it[h] || '').replace(/"/g, '""') + '"').join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'value-tracker.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+  window.open('/api/export/csv');
+});
+
+// What If calculator
+const wfPrice = document.getElementById('wfPrice');
+const wfYears = document.getElementById('wfYears');
+const wfDaysPerWeek = document.getElementById('wfDaysPerWeek');
+
+function calcWhatIf() {
+  const price = parseFloat(wfPrice.value);
+  const years = parseFloat(wfYears.value);
+  const dpw = parseFloat(wfDaysPerWeek.value) || 7;
+  const result = document.getElementById('wfResult');
+  if (!price || !years) { result.style.display = 'none'; return; }
+  result.style.display = 'block';
+  const usageFraction = dpw / 7;
+  const dailyPerUse = price / (years * 365 * usageFraction);
+  const dailyRaw = price / (years * 365);
+  document.getElementById('wfDaily').textContent = formatMoney(dailyPerUse) + '/use';
+  document.getElementById('wfBreakdown').innerHTML = `
+    ${formatMoney(dailyRaw)}/day · ${(price / (years * 12)).toFixed(2)}/month · ${(price / (years * 52)).toFixed(2)}/week
+  `;
+  const milestones = [0.5, 1, 2, 3, 5, 7, 10].filter(y => y <= years * 2);
+  document.getElementById('wfTimeline').innerHTML =
+    '<h3>Cost per Use Over Time</h3>' +
+    milestones.map(y => {
+      const cpud = price / (y * 365 * usageFraction);
+      return `<div class="wf-timeline-row">
+        <span class="yr">${y} year${y !== 1 ? 's' : ''}</span>
+        <span class="cost-per-day ${costClass(cpud)}">${formatMoney(cpud)}/use</span>
+      </div>`;
+    }).join('');
+}
+
+wfPrice.addEventListener('input', calcWhatIf);
+wfYears.addEventListener('input', calcWhatIf);
+wfDaysPerWeek.addEventListener('input', calcWhatIf);
+
+// Charts (Chart.js)
+const chartInstances = {};
+
+function destroyChart(key) {
+  if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+}
+
+function chartColors() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return {
+    text: isDark ? '#f5f5f7' : '#1d1d1f',
+    text2: isDark ? '#98989d' : '#86868b',
+    grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+    green: isDark ? '#30d158' : '#34c759',
+    blue: isDark ? '#0a84ff' : '#0071e3',
+    yellow: isDark ? '#ff9f0a' : '#ff9500',
+    red: isDark ? '#ff453a' : '#ff3b30',
+    palette: isDark
+      ? ['#0a84ff','#30d158','#ff9f0a','#ff453a','#bf5af2','#64d2ff','#ffd60a','#ac8e68']
+      : ['#0071e3','#34c759','#ff9500','#ff3b30','#af52de','#5ac8fa','#ffcc00','#a2845e'],
+  };
+}
+
+function chartFont() {
+  return { family: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif" };
+}
+
+function renderCharts() {
+  if (items.length === 0) return;
+  const c = chartColors();
+  const font = chartFont();
+
+  // ── 1. Category Doughnut ──
+  destroyChart('category');
+  const catTotals = {};
+  items.forEach(it => {
+    const cat = it.category || 'Uncategorized';
+    catTotals[cat] = (catTotals[cat] || 0) + it.price;
+  });
+  const catLabels = Object.keys(catTotals);
+  const catData = Object.values(catTotals);
+  chartInstances.category = new Chart(document.getElementById('chartCategory'), {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        data: catData,
+        backgroundColor: c.palette.slice(0, catLabels.length),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 12 }, padding: 16, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+          },
+        },
+      },
+    },
+  });
+
+  // ── 2. Value Score Distribution ──
+  destroyChart('valueDist');
+  const buckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+  const bucketLabels = ['0–20', '20–40', '40–60', '60–80', '80–100'];
+  items.forEach(it => {
+    const vs = Math.min(100, valueScore(it));
+    const idx = Math.min(4, Math.floor(vs / 20));
+    buckets[idx]++;
+  });
+  const barColors = [c.red, c.yellow, c.yellow, c.green, c.green];
+  chartInstances.valueDist = new Chart(document.getElementById('chartValueDist'), {
+    type: 'bar',
+    data: {
+      labels: bucketLabels,
+      datasets: [{
+        data: buckets,
+        backgroundColor: barColors.map(col => col + '33'),
+        borderColor: barColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        maxBarThickness: 48,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.parsed.y} item${ctx.parsed.y !== 1 ? 's' : ''}` },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Value Score', color: c.text2, font: { ...font, size: 11 } },
+          grid: { display: false },
+          ticks: { color: c.text2, font: { ...font, size: 11 } },
+          border: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, color: c.text2, font: { ...font, size: 11 } },
+          grid: { color: c.grid },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  // ── 3. Cost per Use Trend (top 5 most expensive) ──
+  destroyChart('cpuTrend');
+  const top5 = [...items].sort((a, b) => b.price - a.price).slice(0, 5);
+  const months = [1, 3, 6, 12, 18, 24, 36, 48, 60];
+  const trendDatasets = top5.map((item, i) => {
+    const usageFrac = getUsageFraction(item);
+    const data = months.map(m => {
+      const useDays = m * 30 * usageFrac;
+      return useDays > 0 ? +(item.price / useDays).toFixed(2) : null;
+    });
+    return {
+      label: item.name,
+      data,
+      borderColor: c.palette[i],
+      backgroundColor: c.palette[i] + '18',
+      fill: false,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+    };
+  });
+  chartInstances.cpuTrend = new Chart(document.getElementById('chartCpuTrend'), {
+    type: 'line',
+    data: {
+      labels: months.map(m => m >= 12 ? (m / 12) + 'y' : m + 'mo'),
+      datasets: trendDatasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 11 }, padding: 14, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}/use` },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Time Owned', color: c.text2, font: { ...font, size: 11 } },
+          grid: { display: false },
+          ticks: { color: c.text2, font: { ...font, size: 11 } },
+          border: { display: false },
+        },
+        y: {
+          title: { display: true, text: '$/Use', color: c.text2, font: { ...font, size: 11 } },
+          beginAtZero: false,
+          grid: { color: c.grid },
+          ticks: {
+            color: c.text2, font: { ...font, size: 11 },
+            callback: v => '
+</body>
+</html>
+ + v.toFixed(0),
+          },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  // ── 4. Monthly Cost Breakdown (stacked bar by category) ──
+  destroyChart('monthlyCost');
+  const categories = [...new Set(items.map(it => it.category || 'Uncategorized'))];
+  // Each item's monthly cost = price / (daysSince / 30)
+  // Or equivalently, cost per day * 30
+  const monthlyCostByCat = {};
+  categories.forEach(cat => {
+    monthlyCostByCat[cat] = items
+      .filter(it => (it.category || 'Uncategorized') === cat)
+      .reduce((sum, it) => sum + costPerDay(it) * 30, 0);
+  });
+  chartInstances.monthlyCost = new Chart(document.getElementById('chartMonthlyCost'), {
+    type: 'bar',
+    data: {
+      labels: ['Monthly Cost'],
+      datasets: categories.map((cat, i) => ({
+        label: cat,
+        data: [+monthlyCostByCat[cat].toFixed(2)],
+        backgroundColor: c.palette[i % c.palette.length] + '55',
+        borderColor: c.palette[i % c.palette.length],
+        borderWidth: 1.5,
+        borderRadius: 4,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 11 }, padding: 14, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)}/mo` },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: c.grid },
+          ticks: {
+            color: c.text2, font: { ...font, size: 11 },
+            callback: v => '
+</body>
+</html>
+ + v,
+          },
+          border: { display: false },
+        },
+        y: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { display: false },
+          border: { display: false },
+        },
+      },
+    },
+  });
+}
+
+// Service Worker
+if (!window.__STATIC_MODE && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// Init
+loadItems();
+
+</script>
+</body>
+</html>
