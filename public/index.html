@@ -81,13 +81,38 @@
 
   <!-- Charts -->
   <section id="charts" class="tab-content">
-    <div class="card" style="max-width:100%">
-      <h2>Cost per Use Breakdown</h2>
-      <canvas id="chartCanvas" width="860" height="400" style="width:100%;margin-top:20px"></canvas>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Spending by Category</h3>
+        <div class="chart-wrap chart-wrap-doughnut">
+          <canvas id="chartCategory"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Value Score Distribution</h3>
+        <div class="chart-wrap">
+          <canvas id="chartValueDist"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-card-wide">
+        <h3>Cost per Use Over Time</h3>
+        <p class="chart-hint">Top 5 most expensive items — how cost/use drops as you keep using them</p>
+        <div class="chart-wrap">
+          <canvas id="chartCpuTrend"></canvas>
+        </div>
+      </div>
+      <div class="chart-card chart-card-wide">
+        <h3>Monthly Cost Breakdown</h3>
+        <p class="chart-hint">Estimated monthly cost by category</p>
+        <div class="chart-wrap">
+          <canvas id="chartMonthlyCost"></canvas>
+        </div>
+      </div>
     </div>
   </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'charts') setTimeout(renderChart, 50);
+    if (tab.dataset.tab === 'charts') setTimeout(renderCharts, 50);
   });
 });
 
@@ -213,63 +213,242 @@ wfPrice.addEventListener('input', calcWhatIf);
 wfYears.addEventListener('input', calcWhatIf);
 wfDaysPerWeek.addEventListener('input', calcWhatIf);
 
-// Chart
-function renderChart() {
-  const canvas = document.getElementById('chartCanvas');
-  if (!canvas || items.length === 0) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = 400 * dpr;
-  ctx.scale(dpr, dpr);
-  const W = canvas.clientWidth, H = 400;
-  ctx.clearRect(0, 0, W, H);
+// Charts (Chart.js)
+const chartInstances = {};
 
+function destroyChart(key) {
+  if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; }
+}
+
+function chartColors() {
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const labelColor = isDark ? '#98989d' : '#86868b';
-  const greenColor = isDark ? '#30d158' : '#34c759';
-  const yellowColor = isDark ? '#ff9f0a' : '#ff9500';
-  const redColor = isDark ? '#ff453a' : '#ff3b30';
+  return {
+    text: isDark ? '#f5f5f7' : '#1d1d1f',
+    text2: isDark ? '#98989d' : '#86868b',
+    grid: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+    green: isDark ? '#30d158' : '#34c759',
+    blue: isDark ? '#0a84ff' : '#0071e3',
+    yellow: isDark ? '#ff9f0a' : '#ff9500',
+    red: isDark ? '#ff453a' : '#ff3b30',
+    palette: isDark
+      ? ['#0a84ff','#30d158','#ff9f0a','#ff453a','#bf5af2','#64d2ff','#ffd60a','#ac8e68']
+      : ['#0071e3','#34c759','#ff9500','#ff3b30','#af52de','#5ac8fa','#ffcc00','#a2845e'],
+  };
+}
 
-  const sorted = [...items].sort((a, b) => costPerUseDay(b) - costPerUseDay(a));
-  const maxCpud = Math.max(...sorted.map(costPerUseDay));
-  const barW = Math.min(56, (W - 60) / sorted.length - 6);
-  const startX = 50;
+function chartFont() {
+  return { family: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif" };
+}
 
-  // Grid lines
-  ctx.strokeStyle = gridColor;
-  ctx.fillStyle = labelColor;
-  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const y = 30 + (H - 80) * (i / 4);
-    const val = maxCpud * (1 - i / 4);
-    ctx.beginPath(); ctx.moveTo(45, y); ctx.lineTo(W, y); ctx.stroke();
-    ctx.fillText('$' + val.toFixed(2), 42, y + 4);
-  }
+function renderCharts() {
+  if (items.length === 0) return;
+  const c = chartColors();
+  const font = chartFont();
 
-  sorted.forEach((item, i) => {
-    const cpud = costPerUseDay(item);
-    const barH = (cpud / maxCpud) * (H - 80);
-    const x = startX + i * (barW + 6);
-    const y = H - 50 - barH;
+  // ── 1. Category Doughnut ──
+  destroyChart('category');
+  const catTotals = {};
+  items.forEach(it => {
+    const cat = it.category || 'Uncategorized';
+    catTotals[cat] = (catTotals[cat] || 0) + it.price;
+  });
+  const catLabels = Object.keys(catTotals);
+  const catData = Object.values(catTotals);
+  chartInstances.category = new Chart(document.getElementById('chartCategory'), {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        data: catData,
+        backgroundColor: c.palette.slice(0, catLabels.length),
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 12 }, padding: 16, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: $${ctx.parsed.toLocaleString()}`,
+          },
+        },
+      },
+    },
+  });
 
-    const cls = costClass(cpud);
-    ctx.fillStyle = cls === 'excellent' ? greenColor : cls === 'good' ? yellowColor : redColor;
-    ctx.beginPath();
-    ctx.roundRect(x, y, barW, barH, [6, 6, 0, 0]);
-    ctx.fill();
+  // ── 2. Value Score Distribution ──
+  destroyChart('valueDist');
+  const buckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+  const bucketLabels = ['0–20', '20–40', '40–60', '60–80', '80–100'];
+  items.forEach(it => {
+    const vs = Math.min(100, valueScore(it));
+    const idx = Math.min(4, Math.floor(vs / 20));
+    buckets[idx]++;
+  });
+  const barColors = [c.red, c.yellow, c.yellow, c.green, c.green];
+  chartInstances.valueDist = new Chart(document.getElementById('chartValueDist'), {
+    type: 'bar',
+    data: {
+      labels: bucketLabels,
+      datasets: [{
+        data: buckets,
+        backgroundColor: barColors.map(col => col + '33'),
+        borderColor: barColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        maxBarThickness: 48,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.parsed.y} item${ctx.parsed.y !== 1 ? 's' : ''}` },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Value Score', color: c.text2, font: { ...font, size: 11 } },
+          grid: { display: false },
+          ticks: { color: c.text2, font: { ...font, size: 11 } },
+          border: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1, color: c.text2, font: { ...font, size: 11 } },
+          grid: { color: c.grid },
+          border: { display: false },
+        },
+      },
+    },
+  });
 
-    ctx.fillStyle = labelColor;
-    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.save();
-    ctx.translate(x + barW / 2, H - 38);
-    ctx.rotate(-0.5);
-    const label = item.name.length > 10 ? item.name.slice(0, 9) + '\u2026' : item.name;
-    ctx.fillText(label, 0, 0);
-    ctx.restore();
+  // ── 3. Cost per Use Trend (top 5 most expensive) ──
+  destroyChart('cpuTrend');
+  const top5 = [...items].sort((a, b) => b.price - a.price).slice(0, 5);
+  const months = [1, 3, 6, 12, 18, 24, 36, 48, 60];
+  const trendDatasets = top5.map((item, i) => {
+    const usageFrac = getUsageFraction(item);
+    const data = months.map(m => {
+      const useDays = m * 30 * usageFrac;
+      return useDays > 0 ? +(item.price / useDays).toFixed(2) : null;
+    });
+    return {
+      label: item.name,
+      data,
+      borderColor: c.palette[i],
+      backgroundColor: c.palette[i] + '18',
+      fill: false,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+    };
+  });
+  chartInstances.cpuTrend = new Chart(document.getElementById('chartCpuTrend'), {
+    type: 'line',
+    data: {
+      labels: months.map(m => m >= 12 ? (m / 12) + 'y' : m + 'mo'),
+      datasets: trendDatasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 11 }, padding: 14, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}/use` },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Time Owned', color: c.text2, font: { ...font, size: 11 } },
+          grid: { display: false },
+          ticks: { color: c.text2, font: { ...font, size: 11 } },
+          border: { display: false },
+        },
+        y: {
+          title: { display: true, text: '$/Use', color: c.text2, font: { ...font, size: 11 } },
+          beginAtZero: false,
+          grid: { color: c.grid },
+          ticks: {
+            color: c.text2, font: { ...font, size: 11 },
+            callback: v => '$' + v.toFixed(0),
+          },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  // ── 4. Monthly Cost Breakdown (stacked bar by category) ──
+  destroyChart('monthlyCost');
+  const categories = [...new Set(items.map(it => it.category || 'Uncategorized'))];
+  // Each item's monthly cost = price / (daysSince / 30)
+  // Or equivalently, cost per day * 30
+  const monthlyCostByCat = {};
+  categories.forEach(cat => {
+    monthlyCostByCat[cat] = items
+      .filter(it => (it.category || 'Uncategorized') === cat)
+      .reduce((sum, it) => sum + costPerDay(it) * 30, 0);
+  });
+  chartInstances.monthlyCost = new Chart(document.getElementById('chartMonthlyCost'), {
+    type: 'bar',
+    data: {
+      labels: ['Monthly Cost'],
+      datasets: categories.map((cat, i) => ({
+        label: cat,
+        data: [+monthlyCostByCat[cat].toFixed(2)],
+        backgroundColor: c.palette[i % c.palette.length] + '55',
+        borderColor: c.palette[i % c.palette.length],
+        borderWidth: 1.5,
+        borderRadius: 4,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: c.text2, font: { ...font, size: 11 }, padding: 14, usePointStyle: true, pointStyleWidth: 8 },
+        },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toFixed(2)}/mo` },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: c.grid },
+          ticks: {
+            color: c.text2, font: { ...font, size: 11 },
+            callback: v => '$' + v,
+          },
+          border: { display: false },
+        },
+        y: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { display: false },
+          border: { display: false },
+        },
+      },
+    },
   });
 }
 
