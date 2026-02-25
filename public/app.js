@@ -8,6 +8,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'charts') setTimeout(renderChart, 50);
   });
 });
 
@@ -43,21 +44,14 @@ function costClass(cpd) {
   return 'high';
 }
 
-// Value score: how much value extracted (accounts for usage frequency)
 function valueScore(item) {
   const useDays = useDaysSince(item);
   if (item.expectedYears) {
     const expectedUseDays = item.expectedYears * 365 * getUsageFraction(item);
     return Math.min(100, (useDays / expectedUseDays) * 100);
   }
-  // Fallback: reaches 100 when cost/use-day drops below $0.10
   const target = item.price / 0.10;
   return Math.min(100, (useDays / target) * 100);
-}
-
-function expectedCostPerDay(item) {
-  if (item.expectedYears) return item.price / (item.expectedYears * 365);
-  return null;
 }
 
 function valueBarColor(score) {
@@ -71,7 +65,6 @@ async function loadItems() {
   const res = await fetch(API);
   items = await res.json();
   renderDashboard();
-  if (typeof renderChart === 'function') renderChart();
 }
 
 function getCategories() {
@@ -89,13 +82,9 @@ function renderDashboard() {
   catSelect.innerHTML = '<option value="">All</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
   catSelect.value = currentVal;
 
-  // Update datalist
-  const dl = document.getElementById('categoryList');
-  if (dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
-
   let filtered = filterCat ? items.filter(i => i.category === filterCat) : [...items];
 
-  // Sort (use costPerUseDay as primary metric)
+  // Sort
   const sorters = {
     costPerDay: (a, b) => costPerUseDay(a) - costPerUseDay(b),
     costPerDayDesc: (a, b) => costPerUseDay(b) - costPerUseDay(a),
@@ -116,9 +105,9 @@ function renderDashboard() {
     const bestItem = [...filtered].sort((a, b) => costPerUseDay(a) - costPerUseDay(b))[0];
     statsRow.innerHTML = `
       <div class="stat-card"><div class="label">Total Invested</div><div class="value">$${totalValue.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="label">Daily Burn (use)</div><div class="value">${formatMoney(totalPerUse)}</div></div>
+      <div class="stat-card"><div class="label">Daily Burn</div><div class="value">${formatMoney(totalPerUse)}</div></div>
       <div class="stat-card"><div class="label">Avg $/Use</div><div class="value">${formatMoney(avgCpud)}</div></div>
-      <div class="stat-card"><div class="label">Best Value</div><div class="value" style="font-size:1rem">${bestItem.name}</div></div>
+      <div class="stat-card"><div class="label">Best Value</div><div class="value" style="font-size:1.0625rem">${bestItem.name}</div></div>
     `;
   } else {
     statsRow.innerHTML = '';
@@ -146,18 +135,18 @@ function renderDashboard() {
     const notesHtml = item.notes ? `<div class="item-notes">${esc(item.notes)}</div>` : '';
     const lifespanHtml = item.expectedYears ? `<span>${item.expectedYears}yr expected</span>` : '';
     return `
-      <div class="item-card" style="animation-delay:${idx * 0.05}s; border-left-color: ${barColor}">
+      <div class="item-card" style="animation-delay:${idx * 0.04}s">
         <div class="item-info">
           <h3>${esc(item.name)}</h3>
           <div class="item-meta">
             <span>$${item.price.toLocaleString()}</span>
-            <span>${days.toLocaleString()} days owned</span>
+            <span>${days.toLocaleString()} days</span>
             ${usageLabel}
             ${lifespanHtml}
-            <span class="category-tag">${esc(item.category)}</span>
+            ${item.category ? `<span class="category-tag">${esc(item.category)}</span>` : ''}
           </div>
           ${notesHtml}
-          <div class="value-bar" style="margin-top:8px" title="Value score: ${vs.toFixed(0)}%">
+          <div class="value-bar" style="margin-top:10px" title="Value: ${vs.toFixed(0)}%">
             <div class="value-bar-fill" style="width:${vs}%; background:${barColor}"></div>
           </div>
         </div>
@@ -165,10 +154,6 @@ function renderDashboard() {
           <div class="cost-per-day ${costClass(cpud)}">${formatMoney(cpud)}</div>
           <div class="cost-label">per use</div>
           <div class="cost-secondary">${formatMoney(cpd)}/day</div>
-          <div class="item-actions">
-            <button onclick="editItem('${item.id}')" title="Edit">✏️</button>
-            <button onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
-          </div>
         </div>
       </div>
     `;
@@ -180,72 +165,6 @@ function esc(s) {
   d.textContent = s || '';
   return d.innerHTML;
 }
-
-// Add form
-document.getElementById('addForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const body = {
-    name: document.getElementById('itemName').value,
-    price: document.getElementById('itemPrice').value,
-    purchaseDate: document.getElementById('itemDate').value,
-    category: document.getElementById('itemCategory').value || 'Uncategorized',
-    expectedYears: document.getElementById('itemExpectedYears').value || null,
-    notes: document.getElementById('itemNotes').value || '',
-    daysPerWeek: document.getElementById('itemDaysPerWeek').value || 7,
-  };
-  await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  e.target.reset();
-  document.getElementById('itemDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('itemDaysPerWeek').value = '7';
-  // Switch to dashboard
-  document.querySelector('[data-tab="dashboard"]').click();
-  loadItems();
-});
-
-// Set default date
-document.getElementById('itemDate').value = new Date().toISOString().split('T')[0];
-
-// Delete
-async function deleteItem(id) {
-  if (!confirm('Delete this item?')) return;
-  await fetch(`${API}/${id}`, { method: 'DELETE' });
-  loadItems();
-}
-
-// Edit
-function editItem(id) {
-  const item = items.find(i => i.id === id);
-  if (!item) return;
-  document.getElementById('editId').value = id;
-  document.getElementById('editName').value = item.name;
-  document.getElementById('editPrice').value = item.price;
-  document.getElementById('editDate').value = item.purchaseDate;
-  document.getElementById('editCategory').value = item.category;
-  document.getElementById('editExpectedYears').value = item.expectedYears || '';
-  document.getElementById('editNotes').value = item.notes || '';
-  document.getElementById('editDaysPerWeek').value = item.daysPerWeek || 7;
-  document.getElementById('editModal').style.display = 'flex';
-}
-
-document.getElementById('editCancel').addEventListener('click', () => {
-  document.getElementById('editModal').style.display = 'none';
-});
-
-document.getElementById('editSave').addEventListener('click', async () => {
-  const id = document.getElementById('editId').value;
-  const body = {
-    name: document.getElementById('editName').value,
-    price: document.getElementById('editPrice').value,
-    purchaseDate: document.getElementById('editDate').value,
-    category: document.getElementById('editCategory').value,
-    expectedYears: document.getElementById('editExpectedYears').value || null,
-    notes: document.getElementById('editNotes').value || '',
-    daysPerWeek: document.getElementById('editDaysPerWeek').value || 7,
-  };
-  await fetch(`${API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  document.getElementById('editModal').style.display = 'none';
-  loadItems();
-});
 
 // Sort/filter change
 document.getElementById('sortBy').addEventListener('change', renderDashboard);
@@ -263,6 +182,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', () => {
 const wfPrice = document.getElementById('wfPrice');
 const wfYears = document.getElementById('wfYears');
 const wfDaysPerWeek = document.getElementById('wfDaysPerWeek');
+
 function calcWhatIf() {
   const price = parseFloat(wfPrice.value);
   const years = parseFloat(wfYears.value);
@@ -275,11 +195,11 @@ function calcWhatIf() {
   const dailyRaw = price / (years * 365);
   document.getElementById('wfDaily').textContent = formatMoney(dailyPerUse) + '/use';
   document.getElementById('wfBreakdown').innerHTML = `
-    ${formatMoney(dailyRaw)}/day raw · $${(price / (years * 12)).toFixed(2)}/month · $${(price / (years * 52)).toFixed(2)}/week
+    ${formatMoney(dailyRaw)}/day · $${(price / (years * 12)).toFixed(2)}/month · $${(price / (years * 52)).toFixed(2)}/week
   `;
-  // Timeline
   const milestones = [0.5, 1, 2, 3, 5, 7, 10].filter(y => y <= years * 2);
-  document.getElementById('wfTimeline').innerHTML = '<h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text2)">Cost/Use Over Time</h3>' +
+  document.getElementById('wfTimeline').innerHTML =
+    '<h3>Cost per Use Over Time</h3>' +
     milestones.map(y => {
       const cpud = price / (y * 365 * usageFraction);
       return `<div class="wf-timeline-row">
@@ -288,16 +208,12 @@ function calcWhatIf() {
       </div>`;
     }).join('');
 }
+
 wfPrice.addEventListener('input', calcWhatIf);
 wfYears.addEventListener('input', calcWhatIf);
 wfDaysPerWeek.addEventListener('input', calcWhatIf);
 
-// Close modal on backdrop click
-document.getElementById('editModal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) document.getElementById('editModal').style.display = 'none';
-});
-
-// Chart (uses cost per use day)
+// Chart
 function renderChart() {
   const canvas = document.getElementById('chartCanvas');
   if (!canvas || items.length === 0) return;
@@ -309,15 +225,22 @@ function renderChart() {
   const W = canvas.clientWidth, H = 400;
   ctx.clearRect(0, 0, W, H);
 
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const labelColor = isDark ? '#98989d' : '#86868b';
+  const greenColor = isDark ? '#30d158' : '#34c759';
+  const yellowColor = isDark ? '#ff9f0a' : '#ff9500';
+  const redColor = isDark ? '#ff453a' : '#ff3b30';
+
   const sorted = [...items].sort((a, b) => costPerUseDay(b) - costPerUseDay(a));
   const maxCpud = Math.max(...sorted.map(costPerUseDay));
-  const barW = Math.min(60, (W - 60) / sorted.length - 4);
+  const barW = Math.min(56, (W - 60) / sorted.length - 6);
   const startX = 50;
 
   // Grid lines
-  ctx.strokeStyle = '#2a2a3e';
-  ctx.fillStyle = '#8888a8';
-  ctx.font = '11px -apple-system, sans-serif';
+  ctx.strokeStyle = gridColor;
+  ctx.fillStyle = labelColor;
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const y = 30 + (H - 80) * (i / 4);
@@ -329,64 +252,26 @@ function renderChart() {
   sorted.forEach((item, i) => {
     const cpud = costPerUseDay(item);
     const barH = (cpud / maxCpud) * (H - 80);
-    const x = startX + i * (barW + 4);
+    const x = startX + i * (barW + 6);
     const y = H - 50 - barH;
 
-    // Bar
     const cls = costClass(cpud);
-    ctx.fillStyle = cls === 'excellent' ? '#00b894' : cls === 'good' ? '#fdcb6e' : '#e17055';
+    ctx.fillStyle = cls === 'excellent' ? greenColor : cls === 'good' ? yellowColor : redColor;
     ctx.beginPath();
-    ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+    ctx.roundRect(x, y, barW, barH, [6, 6, 0, 0]);
     ctx.fill();
 
-    // Label
-    ctx.fillStyle = '#8888a8';
-    ctx.font = '10px -apple-system, sans-serif';
+    ctx.fillStyle = labelColor;
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.textAlign = 'center';
     ctx.save();
     ctx.translate(x + barW / 2, H - 38);
     ctx.rotate(-0.5);
-    const label = item.name.length > 10 ? item.name.slice(0, 9) + '…' : item.name;
+    const label = item.name.length > 10 ? item.name.slice(0, 9) + '\u2026' : item.name;
     ctx.fillText(label, 0, 0);
     ctx.restore();
   });
 }
-
-// Re-render chart when tab shown
-const origTabClick = document.querySelectorAll('.tab');
-origTabClick.forEach(tab => {
-  tab.addEventListener('click', () => { if (tab.dataset.tab === 'charts') setTimeout(renderChart, 50); });
-});
-
-// Import (preserves daysPerWeek)
-document.getElementById('importFile').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    const importItems = data.items || data;
-    if (!Array.isArray(importItems)) throw new Error('Invalid format');
-    for (const item of importItems) {
-      await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: item.name,
-          price: item.price,
-          purchaseDate: item.purchaseDate,
-          category: item.category,
-          expectedYears: item.expectedYears || null,
-          notes: item.notes || '',
-          daysPerWeek: item.daysPerWeek || 7,
-        })
-      });
-    }
-    loadItems();
-    alert(`Imported ${importItems.length} items!`);
-  } catch (err) { alert('Import failed: ' + err.message); }
-  e.target.value = '';
-});
 
 // Service Worker
 if ('serviceWorker' in navigator) {
