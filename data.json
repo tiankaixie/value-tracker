@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "id": "eefc1239-882f-4cb1-8990-1d82bef07c96",
+      "name": "MacBook Pro M1",
+      "price": 3000,
+      "purchaseDate": "2021-12-15",
+      "category": "Electronics",
+      "expectedYears": 5,
+      "daysPerWeek": 7,
+      "notes": "Apple Silicon M1 chip",
+      "createdAt": "2026-02-25T02:04:24.263Z"
+    },
+    {
+      "id": "c974ef5e-71d4-492a-8efb-cc1bf19c9e99",
+      "name": "iPhone 15 Pro",
+      "price": 1000,
+      "purchaseDate": "2023-12-15",
+      "category": "Electronics",
+      "expectedYears": 4,
+      "daysPerWeek": 7,
+      "notes": "256GB, Natural Titanium",
+      "createdAt": "2026-02-25T02:04:24.303Z"
+    },
+    {
+      "id": "4aa01eeb-29e9-41e7-bdb8-acc1c4c72897",
+      "name": "Tesla Model 3",
+      "price": 53000,
+      "purchaseDate": "2024-12-15",
+      "category": "Vehicle",
+      "expectedYears": 10,
+      "daysPerWeek": 5,
+      "notes": "Standard Range Plus",
+      "createdAt": "2026-02-25T02:04:24.345Z"
+    }
+  ]
+}
