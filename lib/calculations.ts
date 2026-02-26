@@ -38,6 +38,7 @@ export function valueScore(item: Item): number {
       item.expectedYears * 365 * getUsageFraction(item);
     return Math.min(100, (useDays / expectedUseDays) * 100);
   }
+  // Target: item pays for itself at $0.10/use-day
   const target = item.price / 0.1;
   return Math.min(100, (useDays / target) * 100);
 }
