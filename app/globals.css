@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "@cloudflare/kumo/styles";
+@source "../node_modules/@cloudflare/kumo";
+
+:root {
+  --color-green: #34c759;
+  --color-yellow: #ff9500;
+  --color-red: #ff3b30;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-green: #30d158;
+    --color-yellow: #ff9f0a;
+    --color-red: #ff453a;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Segoe UI", Roboto, sans-serif;
+}
+
+/* Value bar */
+.value-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.value-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Cost class colors */
+.cost-excellent {
+  color: var(--color-green);
+}
+.cost-good {
+  color: var(--color-yellow);
+}
+.cost-high {
+  color: var(--color-red);
+}
+
+/* Item card animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.item-card-animate {
+  animation: fadeInUp 0.35s ease both;
+}
+
+/* Chart container */
+.chart-wrap {
+  position: relative;
+  height: 260px;
+}
+
+.chart-wrap-sm {
+  position: relative;
+  height: 240px;
+}
